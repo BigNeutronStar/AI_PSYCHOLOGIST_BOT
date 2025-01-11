@@ -1,5 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message
+from aiogram.filters import Command
 from utils.keyboards import main_menu_keyboard
 
 router = Router()
@@ -10,9 +11,10 @@ relaxation_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="Прогрессивная релаксация", callback_data="progressive")]
 ])
 
-@router.message(F.text == "Рекомендации по релаксации")
+@router.message(Command("relax"))
 async def suggest_relaxation(message: Message):
     await message.answer("Выбери технику релаксации:", reply_markup=relaxation_keyboard)
+    return  # Добавьте эту строку
 
 @router.callback_query(F.data == "breathing")
 async def breathing_exercise(callback: CallbackQuery):

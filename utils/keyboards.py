@@ -3,11 +3,11 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 # Клавиатура главного меню
 main_menu_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="Определить настроение")],
-        [KeyboardButton(text="Рекомендации по релаксации")],
-        [KeyboardButton(text="Психологическая поддержка")],
-        [KeyboardButton(text="Техники самопомощи")],
-        [KeyboardButton(text="Финальная анкета")],
+        [KeyboardButton(text="/mood")],
+        [KeyboardButton(text="/relax")],
+        [KeyboardButton(text="/support")],
+        [KeyboardButton(text="/self_help")],
+        [KeyboardButton(text="/feedback")],
     ],
     resize_keyboard=True,
 )
