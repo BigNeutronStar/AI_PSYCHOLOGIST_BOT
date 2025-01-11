@@ -5,6 +5,8 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKey
 from aiogram.filters import Command
 from utils.keyboards import main_menu_keyboard
 
+from utils.check_registration import check_age, check_name
+
 router = Router()
 
 class RegistrationStates(StatesGroup):
@@ -19,12 +21,20 @@ async def start_registration(message: Message, state: FSMContext):
 
 @router.message(RegistrationStates.waiting_for_name)
 async def process_name(message: Message, state: FSMContext):
+    if not check_name(message.text):
+        await message.answer("Пожалуйста, введите имя, используя только буквы.")
+        return
+
     await state.update_data(name=message.text)
     await message.answer("Сколько тебе лет?")
     await state.set_state(RegistrationStates.waiting_for_age)
 
 @router.message(RegistrationStates.waiting_for_age)
 async def process_age(message: Message, state: FSMContext):
+    if not check_age(message.text):
+        await message.answer("Пожалуйста, введите возраст числом.")
+        return
+
     await state.update_data(age=message.text)
     await message.answer("Какое у тебя настроение? (радость, грусть, тревога, злость, нейтральное)")
     await state.set_state(RegistrationStates.waiting_for_mood)
