@@ -1,0 +1,8 @@
+aiogram
+langchain
+openai
+apscheduler
+pandas
+python-dotenv
+langchain-community
+langchain-openai
