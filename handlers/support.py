@@ -13,6 +13,6 @@ async def handle_support(message: Message):
 
 @router.message(F.text)
 async def generate_support(message: Message):
-    mood = "нейтральное"  # Можно заменить на вызов detect_mood
+    mood = "нейтральное"  # Можно заменить на вызов detect_mood /////// need to replace!!!
     response = await generate_support_response(mood=mood, message=message.text)
     await message.answer(response, reply_markup=main_menu_keyboard)
