@@ -29,3 +29,7 @@ async def detect_mood(text: str) -> str:
 async def generate_support_response(mood: str, message: str) -> str:
     result = await support_chain.ainvoke({"mood": mood, "message": message})
     return result
+
+async def chat_with_gpt(message: str) -> str:
+    response = await llm.ainvoke(message)
+    return response
