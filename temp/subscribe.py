@@ -18,7 +18,8 @@ subscribe_techniques = {
 @router.callback_query(F.data.startswith("subscribe_scheduler"))
 async def subscribe_gratitude(callback: CallbackQuery):
     chat_id = callback.message.chat.id
-    technique_name = subscribe_techniques.get(callback.data.split('_')[2])
+
+    technique_name = subscribe_techniques.get("_".join(callback.data.split('_')[2:]))
 
     subscribe_daily_reminder(bot, chat_id, technique_name)
     await callback.message.answer(f"Вы подписаны на ежедневные напоминания для техники '{technique_name}'.",
@@ -29,7 +30,7 @@ async def subscribe_gratitude(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("unsubscribe_scheduler"))
 async def unsubscribe_gratitude(callback: CallbackQuery):
     chat_id = callback.message.chat.id
-    technique_name = subscribe_techniques.get(callback.data.split('_')[2])
+    technique_name = subscribe_techniques.get("_".join(callback.data.split('_')[2:]))
 
     unsubscribe_daily_reminder(chat_id, technique_name)
     await callback.message.answer(f"Вы отписались от ежедневных напоминаний для техники '{technique_name}'.",
