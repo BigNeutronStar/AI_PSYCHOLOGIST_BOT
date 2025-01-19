@@ -74,8 +74,6 @@ async def detect_user_mood(message: Message):
         await message.answer(f"Ваше настроение: {mood}")
         user_states[message.from_user.id] = None
     else:
-        response = await chat_with_gpt(message)
-        await message.answer(response)
         await handle_general_message(message)
 
 
@@ -143,8 +141,6 @@ async def generate_support(message: Message):
         await message.answer(response)
         user_states[message.from_user.id] = None
     else:
-        response = await chat_with_gpt(message)
-        await message.answer(response)
         await handle_general_message(message)
 
 # ----------------------
