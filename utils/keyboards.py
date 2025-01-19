@@ -13,6 +13,19 @@ main_menu_keyboard = ReplyKeyboardMarkup(
 )
 
 
+relaxation_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Дыхательные упражнения", callback_data="breathing")],
+    [InlineKeyboardButton(text="Медитация", callback_data="meditation")],
+    [InlineKeyboardButton(text="Прогрессивная релаксация", callback_data="progressive")]
+])
+
+
+self_help_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Дневник благодарности", callback_data="gratitude")],
+    [InlineKeyboardButton(text="Упражнение 'Пять чувств'", callback_data="five_senses")]
+])
+
+
 def give_subscribe_inline_keyboard(technique: str):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Подписаться", callback_data=f"subscribe_scheduler_{technique}")],
