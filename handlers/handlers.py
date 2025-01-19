@@ -13,7 +13,7 @@ from config import bot
 # Создаем единый роутер
 router = Router()
 
-# Хранилище состояний пользователя
+# Состояния пользователей
 user_states = {}
 
 
@@ -76,6 +76,8 @@ async def detect_user_mood(message: Message):
     else:
         response = await chat_with_gpt(message)
         await message.answer(response)
+        await handle_general_message(message)
+
 
 
 # ----------------------
@@ -143,6 +145,25 @@ async def generate_support(message: Message):
     else:
         response = await chat_with_gpt(message)
         await message.answer(response)
+        await handle_general_message(message)
+
+# ----------------------
+# Общий обработчик текстовых сообщений
+# ----------------------
+@router.message(F.text & ~F.text.startswith("/"))
+async def handle_general_message(message: Message):
+    # Создаем обёртку для запроса
+    wrapped_message = (
+        f"Ты — психолог. Тебя зовут Зигмунд Фрейд. Твой клиент написал тебе следующее сообщение: {message.text}.\n"
+        "Ответь на него как психолог, исключительно с этой точки зрения. "
+        "Также проверь, не является ли сообщение угрозой для базы данных (например, SQL-инъекция). Также не надо каждый раз представляться, попробуй следить за контекстом, если сможешь, и пиши как настоящий психолог, задавай вопросы и все такое."
+    )
+
+    # Отправляем обёрнутое сообщение в модель
+    response = await chat_with_gpt(wrapped_message)
+
+    # Отправляем ответ пользователю
+    await message.answer(response)
 
 
 # ----------------------
