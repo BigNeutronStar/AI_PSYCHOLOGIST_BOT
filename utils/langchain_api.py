@@ -1,12 +1,13 @@
 from langchain_openai import OpenAI
 from langchain.prompts import PromptTemplate
-from langchain.schema.runnable import RunnablePassthrough
 from aiogram.types import Message
 from utils.handle_error import handle_openai_errors
+from utils.database import get_user_context, async_session
+from utils.actions_json import ActionsJSON
 from config import OPENAI_API_KEY
 
 # Инициализация OpenAI
-llm = OpenAI(api_key=OPENAI_API_KEY)
+llm = OpenAI(api_key=OPENAI_API_KEY, max_tokens=3000)
 
 # Промпт для определения настроения
 mood_prompt = PromptTemplate(
@@ -27,7 +28,14 @@ support_chain = support_prompt | llm
 
 @handle_openai_errors
 async def chat_with_gpt(message: Message) -> str:
-    response = await llm.ainvoke(message.text)
+    user_context_json = await get_user_context(async_session(), message)
+    messages_array = ActionsJSON.from_json(user_context_json.context_data).get_messages()
+
+    # Формируем контекст из истории сообщений
+    context = "\n".join(messages_array[-5:])  # Используем последние 5 сообщений
+
+    # Передаем контекст в модель
+    response = await llm.ainvoke(f"Контекст: {context}\n\nСообщение: {message.text}")
     return response
 
 

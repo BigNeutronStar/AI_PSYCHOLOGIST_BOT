@@ -1,6 +1,6 @@
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message
 from aiogram.dispatcher.middlewares.base import BaseMiddleware
-from utils.database import get_user
+from utils.database import get_user_context, update_user_context
 
 
 class DatabaseMiddleware(BaseMiddleware):
@@ -13,30 +13,16 @@ class DatabaseMiddleware(BaseMiddleware):
         async with self.sessionmaker() as session:
             data["db_session"] = session  # Добавляем сессию в контекст обработки события
 
-            if isinstance(event, Message):
-                await self.on_pre_process_message(event, data)
-            elif isinstance(event, CallbackQuery):
-                await self.on_pre_process_callback_query(event, data)
+            await self.on_pre_process_event(event, data)
 
             await handler(event, data)
 
-    async def on_pre_process_message(self, message: Message, data: dict):
-        print(f"Processing message: {message.text}")
-
+    async def on_pre_process_event(self, event, data: dict):
         async with self.sessionmaker() as session:
-            user = await get_user(session, message)
+            user_context = await get_user_context(session, event)
 
-            if not user:
+            if not user_context:
                 return
 
-            user.actions = f"{user.actions or ''} | {message.text}"
-            await session.commit()
-
-    async def on_pre_process_callback_query(self, callback_query: CallbackQuery, data: dict):
-        # Логируем действия пользователя
-        print(f"Processing callback query: {callback_query.data}")
-
-        async with self.sessionmaker() as session:
-            user = await get_user(session, callback_query)
-            user.actions = f"{user.actions or ''} | {callback_query.data}"
+            await update_user_context(user_context, event)
             await session.commit()

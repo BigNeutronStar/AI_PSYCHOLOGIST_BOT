@@ -3,11 +3,11 @@ from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from states.registration import RegistrationStates
-from utils.langchain import detect_mood, generate_support_response, chat_with_gpt
+from utils.langchain_api import detect_mood, generate_support_response, chat_with_gpt
 from utils.keyboards import main_menu_keyboard, give_subscribe_inline_keyboard, relaxation_keyboard, self_help_keyboard
 from utils.registration import check_name, check_age
 from utils.scheduler import subscribe_daily_reminder, unsubscribe_daily_reminder
-from utils.database import create_user
+from utils.database import create_user_and_context
 from config import bot
 
 # Создаем единый роутер
@@ -54,7 +54,7 @@ async def process_mood(message: Message, state: FSMContext):
     user_data = await state.get_data()
     await message.answer(f"Спасибо, {user_data['name']}! Ты зарегистрирован.", reply_markup=main_menu_keyboard)
 
-    await create_user(user_data, message)
+    await create_user_and_context(user_data, message)
     await state.clear()
 
 
