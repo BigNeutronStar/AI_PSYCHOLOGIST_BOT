@@ -2,7 +2,7 @@ from langchain_openai import OpenAI
 from langchain.prompts import PromptTemplate
 from aiogram.types import Message
 from utils.handle_error import handle_openai_errors
-from utils.database import get_user_context, async_session
+from utils.database import get_user_context, async_session, get_user
 from utils.actions_json import ActionsJSON
 from config import OPENAI_API_KEY
 
@@ -28,22 +28,25 @@ support_chain = support_prompt | llm
 
 @handle_openai_errors
 async def chat_with_gpt(message: Message) -> str:
-    user_context_json = await get_user_context(async_session(), message)
-    messages_array = ActionsJSON.from_json(user_context_json.context_data).get_messages()
+    async with async_session() as session:
+        user_context_json = await get_user_context(session, message)
+        messages_array = ActionsJSON.from_json(user_context_json.context_data).get_messages()
 
-    # Формируем контекст из истории сообщений
-    context = "\n".join(messages_array[-5:])  # Используем последние 5 сообщений
+        user = await get_user(session, message)
 
-    wrapped_message = (
-        f"Ты — психолог. Тебя зовут Зигмунд Фрейд. Твой клиент написал тебе следующее сообщение: {message.text}.\n"
-        "Ответь на него как психолог, исключительно с этой точки зрения. "
-        f"до этого вопроса вы немного пообщались. Вот последнее что он говорил {context}"
-        "Также не надо каждый раз представляться, попробуй следить за контекстом, если сможешь, и пиши как настоящий психолог, также ты можешь задавать вопросы."
-    )
+        # Формируем контекст из истории сообщений
+        context = "\n".join(messages_array[-5:])
 
-    # Передаем контекст в модель
-    response = await llm.ainvoke(wrapped_message)
-    return response
+        wrapped_message = (
+            f"Ты — психолог. Тебя зовут Зигмунд Фрейд. Твой клиент по имени {user.name} написал тебе следующее сообщение: {message.text}.\n"
+            "Ответь на него как психолог, исключительно с этой точки зрения. "
+            f"до этого вопроса вы немного пообщались. Вот последнее что он говорил {context}"
+            "Также не надо каждый раз представляться, попробуй следить за контекстом, если сможешь, и пиши как настоящий психолог, также ты можешь задавать вопросы."
+        )
+
+        # Передаем контекст в модель
+        response = await llm.ainvoke(wrapped_message)
+        return response
 
 
 @handle_openai_errors
