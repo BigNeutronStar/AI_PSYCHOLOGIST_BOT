@@ -10,6 +10,12 @@ from utils.registration import check_name, check_age
 from utils.scheduler import subscribe_daily_reminder, unsubscribe_daily_reminder
 from utils.database import create_user_and_context
 from config import bot
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from states.feedback import FeedbackStates
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Message
+from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
+from aiogram.fsm.state import StatesGroup, State
 
 # Создаем единый роутер
 router = Router()
@@ -89,20 +95,41 @@ async def suggest_relaxation(message: Message):
 
 @router.callback_query(F.data == "breathing")
 async def breathing_exercise(callback: CallbackQuery):
-    await callback.message.answer("Техника '4-7-8': Вдохните на 4 секунды, задержите дыхание на 7 секунд, выдохните на 8 секунд.",
-                                  reply_markup=give_subscribe_inline_keyboard('breathing'))
+    # Удаляем старое сообщение с кнопками
+    await callback.message.delete()
+
+    # Отправляем новое сообщение
+    await callback.message.answer(
+        "Техника '4-7-8': Вдохните на 4 секунды, задержите дыхание на 7 секунд, выдохните на 8 секунд.",
+        reply_markup=give_subscribe_inline_keyboard('breathing')
+    )
+
 
 
 @router.callback_query(F.data == "meditation")
 async def meditation_exercise(callback: CallbackQuery):
-    await callback.message.answer("Медитация: Сядьте удобно, закройте глаза и сосредоточьтесь на своем дыхании. Дышите медленно и глубоко.",
-                                  reply_markup=give_subscribe_inline_keyboard('meditation'))
+    # Удаляем старое сообщение с кнопками
+    await callback.message.delete()
+
+    # Отправляем новое сообщение
+    await callback.message.answer(
+        "Медитация: Сядьте удобно, закройте глаза и сосредоточьтесь на своем дыхании. Дышите медленно и глубоко.",
+        reply_markup=give_subscribe_inline_keyboard('meditation')
+    )
+
 
 
 @router.callback_query(F.data == "progressive")
 async def progressive_relaxation(callback: CallbackQuery):
-    await callback.message.answer("Прогрессивная релаксация: Напрягайте и расслабляйте мышцы по очереди, начиная с ног и заканчивая лицом.",
-                                  reply_markup=give_subscribe_inline_keyboard("progressive"))
+    # Удаляем старое сообщение с кнопками
+    await callback.message.delete()
+
+    # Отправляем новое сообщение
+    await callback.message.answer(
+        "Прогрессивная релаксация: Напрягайте и расслабляйте мышцы по очереди, начиная с ног и заканчивая лицом.",
+        reply_markup=give_subscribe_inline_keyboard("progressive")
+    )
+
 
 
 # ----------------------
@@ -115,14 +142,29 @@ async def suggest_self_help(message: Message):
 
 @router.callback_query(F.data == "gratitude")
 async def gratitude_journal(callback: CallbackQuery):
-    await callback.message.answer("Запиши 3 вещи, за которые ты благодарен.",
-                                  reply_markup=give_subscribe_inline_keyboard("gratitude"))
+    # Удаляем старое сообщение с кнопками
+    await callback.message.delete()
+
+    # Отправляем новое сообщение
+    await callback.message.answer(
+        "Запиши 3 вещи, за которые ты благодарен.",
+        reply_markup=give_subscribe_inline_keyboard("gratitude")
+    )
+
 
 
 @router.callback_query(F.data == "five_senses")
 async def five_senses_exercise(callback: CallbackQuery):
-    await callback.message.answer("Назови 5 вещей, которые ты видишь, 4 вещи, которые ты слышишь, 3 вещи, которые ты чувствуешь, 2 вещи, которые ты ощущаешь на вкус, и 1 вещь, которую ты чувствуешь запахом.",
-                                  reply_markup=give_subscribe_inline_keyboard("five_senses"))
+    # Удаляем старое сообщение с кнопками
+    await callback.message.delete()
+
+    # Отправляем новое сообщение
+    await callback.message.answer(
+        "Назови 5 вещей, которые ты видишь, 4 вещи, которые ты слышишь, 3 вещи, которые ты чувствуешь, "
+        "2 вещи, которые ты ощущаешь на вкус, и 1 вещь, которую ты чувствуешь запахом.",
+        reply_markup=give_subscribe_inline_keyboard("five_senses")
+    )
+
 
 
 # ----------------------
@@ -159,6 +201,10 @@ async def handle_general_message(message: Message):
 # ----------------------
 # Подписка / отписка
 # ----------------------
+
+# Хранилище для удаленных сообщений
+deleted_messages = {}
+
 subscribe_techniques = {
     "gratitude": "Дневник благодарности",
     "five_senses": "5 чувств",
@@ -172,23 +218,55 @@ subscribe_techniques = {
 async def subscribe_gratitude(callback: CallbackQuery):
     chat_id = callback.message.chat.id
     technique_name = subscribe_techniques.get("_".join(callback.data.split('_')[2:]))
+
+    # Сохраняем удаленное сообщение
+    deleted_messages[chat_id] = {
+        "text": callback.message.text,
+        "reply_markup": callback.message.reply_markup
+    }
+
+    # Удаляем старое сообщение
+    await callback.message.delete()
+
+    # Отправляем новое сообщение
     subscribe_daily_reminder(bot, chat_id, technique_name)
-    await callback.message.answer(f"Вы подписаны на ежедневные напоминания для техники '{technique_name}'.",
-                                  reply_markup=main_menu_keyboard)
+    await callback.message.answer(
+        f"Вы подписаны на ежедневные напоминания для техники '{technique_name}'.",
+        reply_markup=main_menu_keyboard
+    )
+
+
 
 
 @router.callback_query(F.data.startswith("unsubscribe_scheduler"))
 async def unsubscribe_gratitude(callback: CallbackQuery):
     chat_id = callback.message.chat.id
     technique_name = subscribe_techniques.get("_".join(callback.data.split('_')[2:]))
+
+    # Сохраняем удаленное сообщение
+    deleted_messages[chat_id] = {
+        "text": callback.message.text,
+        "reply_markup": callback.message.reply_markup
+    }
+
+    # Удаляем старое сообщение
+    await callback.message.delete()
+
+    # Отправляем новое сообщение
     unsubscribe_daily_reminder(chat_id, technique_name)
-    await callback.message.answer(f"Вы отписались от ежедневных напоминаний для техники '{technique_name}'.",
-                                  reply_markup=main_menu_keyboard)
+    await callback.message.answer(
+        f"Вы отписались от ежедневных напоминаний для техники '{technique_name}'.",
+        reply_markup=main_menu_keyboard
+    )
+
 
 
 @router.callback_query(F.data == "cancel_subscribe_scheduler")
 async def cancel_subscription(callback: CallbackQuery):
     await callback.message.answer("🫡", reply_markup=main_menu_keyboard)
+
+
+
 
 
 # ----------------------
@@ -203,7 +281,6 @@ feedback_questions = [
     "Насколько дружелюбным вам показался бот?",
     "Порекомендуете ли вы этого бота своим друзьям?",
 ]
-
 
 # Начало сбора отзывов
 @router.message(Command("feedback"))
@@ -222,26 +299,21 @@ async def start_feedback(message: Message, state: FSMContext):
 async def handle_feedback_question_1(callback: CallbackQuery, state: FSMContext):
     await process_feedback(callback, state, current_question=0, next_state=FeedbackStates.waiting_for_question_2)
 
-
 @router.callback_query(FeedbackStates.waiting_for_question_2, F.data.startswith("feedback:"))
 async def handle_feedback_question_2(callback: CallbackQuery, state: FSMContext):
     await process_feedback(callback, state, current_question=1, next_state=FeedbackStates.waiting_for_question_3)
-
 
 @router.callback_query(FeedbackStates.waiting_for_question_3, F.data.startswith("feedback:"))
 async def handle_feedback_question_3(callback: CallbackQuery, state: FSMContext):
     await process_feedback(callback, state, current_question=2, next_state=FeedbackStates.waiting_for_question_4)
 
-
 @router.callback_query(FeedbackStates.waiting_for_question_4, F.data.startswith("feedback:"))
 async def handle_feedback_question_4(callback: CallbackQuery, state: FSMContext):
     await process_feedback(callback, state, current_question=3, next_state=FeedbackStates.waiting_for_question_5)
 
-
 @router.callback_query(FeedbackStates.waiting_for_question_5, F.data.startswith("feedback:"))
 async def handle_feedback_question_5(callback: CallbackQuery, state: FSMContext):
     await process_feedback(callback, state, current_question=4, next_state=None)
-
 
 # Универсальная функция обработки отзывов
 async def process_feedback(callback: CallbackQuery, state: FSMContext, current_question: int, next_state):
@@ -269,3 +341,66 @@ async def process_feedback(callback: CallbackQuery, state: FSMContext, current_q
         # Сбрасываем состояние
         await state.clear()
 
+
+# ----------------------
+# Команда /help (Экстренная помощь)
+# ----------------------
+@router.message(Command("help"))
+async def emergency_help(message: Message):
+    # Кнопки для выбора действия
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Успокаивающий диалог", callback_data="calming_dialog")],
+        [InlineKeyboardButton(text="Горячие линии помощи", callback_data="hotlines")]
+    ])
+
+    await message.answer(
+        "Как я могу вам помочь? Выберите одно из следующих действий:",
+        reply_markup=keyboard
+    )
+
+
+# Успокаивающий диалог
+@router.callback_query(F.data == "calming_dialog")
+async def calming_dialog(callback: CallbackQuery):
+    # Удаляем старое сообщение
+    await callback.message.delete()
+
+    # Отправляем технику заземления
+    await callback.message.answer(
+        "Попробуем технику заземления:\n\n"
+        "1. Назовите 5 вещей, которые вы видите вокруг себя.\n"
+        "2. Назовите 4 вещи, которые вы слышите.\n"
+        "3. Назовите 3 вещи, которые вы чувствуете (например, текстуру под рукой).\n"
+        "4. Назовите 2 запаха, которые вы можете уловить.\n"
+        "5. Назовите 1 вкус, который вы можете почувствовать.\n\n"
+        "Дышите медленно и глубоко. Всё будет хорошо. 🌱"
+    )
+
+
+# Список горячих линий помощи
+@router.callback_query(F.data == "hotlines")
+async def hotlines(callback: CallbackQuery):
+    # Удаляем старое сообщение
+    await callback.message.delete()
+
+    # Получение региона пользователя
+    region = "Россия"  # Можно использовать геолокацию или указанный пользователем регион
+    hotlines_by_region = {
+        "Россия": [
+            "📞 112 — Единый номер экстренных служб.",
+            "📞 8-800-2000-122 — Детский телефон доверия.",
+            "📞 8-800-2000-600 — Психологическая помощь для взрослых."
+        ],
+        "США": [
+            "📞 911 — Единый номер экстренных служб.",
+            "📞 1-800-273-TALK (1-800-273-8255) — Национальная линия помощи при суициде.",
+            "📞 1-866-488-7386 — Линия помощи для ЛГБТК+ молодёжи (Trevor Project)."
+        ]
+    }
+
+    hotlines = hotlines_by_region.get(region, ["Извините, информации для вашего региона пока нет."])
+    hotline_text = "\n".join(hotlines)
+
+    await callback.message.answer(
+        f"Вот список горячих линий помощи для региона {region}:\n\n{hotline_text}"
+    )

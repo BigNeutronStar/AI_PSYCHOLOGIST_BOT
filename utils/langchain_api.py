@@ -4,8 +4,10 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from aiogram.types import Message
 from utils.handle_error import handle_openai_errors
-from utils.database import async_session, get_user
+from utils.database import async_session, get_user, get_user_context
 from config import OPENAI_API_KEY
+from utils.actions_json import ActionsJSON
+
 
 # Инициализация OpenAI
 llm = OpenAI(api_key=OPENAI_API_KEY, max_tokens=3000)

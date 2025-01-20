@@ -8,6 +8,8 @@ main_menu_keyboard = ReplyKeyboardMarkup(
         [KeyboardButton(text="/support")],
         [KeyboardButton(text="/self_help")],
         [KeyboardButton(text="/feedback")],
+        [KeyboardButton(text="/help")],
+        
     ],
     resize_keyboard=True,
 )
@@ -20,9 +22,11 @@ relaxation_keyboard = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 
+
+
 self_help_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="Дневник благодарности", callback_data="gratitude")],
-    [InlineKeyboardButton(text="Упражнение 'Пять чувств'", callback_data="five_senses")]
+    [InlineKeyboardButton(text="Упражнение 'Пять чувств'", callback_data="five_senses")],
 ])
 
 
