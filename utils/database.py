@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from config import DATABASE_URL
 from utils.actions_json import ActionsJSON
+from sqlalchemy import BigInteger
 
 Base = declarative_base()
 
@@ -14,7 +15,7 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, unique=True, index=True)
+    user_id = Column(BigInteger, unique=True, index=True)
     username = Column(String, nullable=True)
     name = Column(String, nullable=True)
     age = Column(Integer, nullable=True)
