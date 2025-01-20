@@ -3,8 +3,9 @@ from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from states.registration import RegistrationStates
+from states.feedback import FeedbackStates
 from utils.langchain_api import detect_mood, generate_support_response, chat_with_gpt
-from utils.keyboards import main_menu_keyboard, give_subscribe_inline_keyboard, relaxation_keyboard, self_help_keyboard
+from utils.keyboards import main_menu_keyboard, give_subscribe_inline_keyboard, relaxation_keyboard, self_help_keyboard, create_feedback_keyboard
 from utils.registration import check_name, check_age
 from utils.scheduler import subscribe_daily_reminder, unsubscribe_daily_reminder
 from utils.database import create_user_and_context
@@ -188,3 +189,83 @@ async def unsubscribe_gratitude(callback: CallbackQuery):
 @router.callback_query(F.data == "cancel_subscribe_scheduler")
 async def cancel_subscription(callback: CallbackQuery):
     await callback.message.answer("🫡", reply_markup=main_menu_keyboard)
+
+
+# ----------------------
+# Команда /feedback
+# ----------------------
+
+# Вопросы для обратной связи
+feedback_questions = [
+    "Как вам качество ответов?",
+    "Насколько бот был полезен в решении вашей проблемы?",
+    "Как вы оцениваете скорость работы бота?",
+    "Насколько дружелюбным вам показался бот?",
+    "Порекомендуете ли вы этого бота своим друзьям?",
+]
+
+
+# Начало сбора отзывов
+@router.message(Command("feedback"))
+async def start_feedback(message: Message, state: FSMContext):
+    # Очищаем состояние и данные перед началом
+    await state.clear()
+
+    # Инициализируем сбор отзывов
+    await state.update_data(responses=[])
+    await message.answer(feedback_questions[0], reply_markup=create_feedback_keyboard())
+    await state.set_state(FeedbackStates.waiting_for_question_1)
+
+
+# Обработка вопросов
+@router.callback_query(FeedbackStates.waiting_for_question_1, F.data.startswith("feedback:"))
+async def handle_feedback_question_1(callback: CallbackQuery, state: FSMContext):
+    await process_feedback(callback, state, current_question=0, next_state=FeedbackStates.waiting_for_question_2)
+
+
+@router.callback_query(FeedbackStates.waiting_for_question_2, F.data.startswith("feedback:"))
+async def handle_feedback_question_2(callback: CallbackQuery, state: FSMContext):
+    await process_feedback(callback, state, current_question=1, next_state=FeedbackStates.waiting_for_question_3)
+
+
+@router.callback_query(FeedbackStates.waiting_for_question_3, F.data.startswith("feedback:"))
+async def handle_feedback_question_3(callback: CallbackQuery, state: FSMContext):
+    await process_feedback(callback, state, current_question=2, next_state=FeedbackStates.waiting_for_question_4)
+
+
+@router.callback_query(FeedbackStates.waiting_for_question_4, F.data.startswith("feedback:"))
+async def handle_feedback_question_4(callback: CallbackQuery, state: FSMContext):
+    await process_feedback(callback, state, current_question=3, next_state=FeedbackStates.waiting_for_question_5)
+
+
+@router.callback_query(FeedbackStates.waiting_for_question_5, F.data.startswith("feedback:"))
+async def handle_feedback_question_5(callback: CallbackQuery, state: FSMContext):
+    await process_feedback(callback, state, current_question=4, next_state=None)
+
+
+# Универсальная функция обработки отзывов
+async def process_feedback(callback: CallbackQuery, state: FSMContext, current_question: int, next_state):
+    # Извлекаем оценку
+    rating = int(callback.data.split(":")[1])
+
+    # Сохраняем ответ
+    data = await state.get_data()
+    data["responses"].append({"question": feedback_questions[current_question], "rating": rating})
+    await state.update_data(responses=data["responses"])
+
+    # Удаляем сообщение с кнопками
+    await callback.message.delete()
+
+    # Если есть следующий вопрос, задаем его
+    if next_state:
+        await callback.message.answer(feedback_questions[current_question + 1], reply_markup=create_feedback_keyboard())
+        await state.set_state(next_state)
+    else:
+        # Завершаем сбор обратной связи
+        feedback = await state.get_data()
+        await callback.message.answer("Спасибо за ваш отзыв! Ваши оценки помогут нам стать лучше.")
+        print(f"Отзывы пользователя {callback.from_user.id}: {feedback['responses']}")
+
+        # Сбрасываем состояние
+        await state.clear()
+

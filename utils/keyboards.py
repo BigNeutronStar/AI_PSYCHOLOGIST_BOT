@@ -32,3 +32,18 @@ def give_subscribe_inline_keyboard(technique: str):
         [InlineKeyboardButton(text="Отписаться", callback_data=f"unsubscribe_scheduler_{technique}")],
         [InlineKeyboardButton(text="Отмена", callback_data=f"cancel_subscribe_scheduler")],
     ])
+
+
+def create_feedback_keyboard():
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="1", callback_data="feedback:1"),
+            InlineKeyboardButton(text="2", callback_data="feedback:2"),
+            InlineKeyboardButton(text="3", callback_data="feedback:3"),
+            InlineKeyboardButton(text="4", callback_data="feedback:4"),
+            InlineKeyboardButton(text="5", callback_data="feedback:5"),
+        ]
+    ])
+    return keyboard
+
+
