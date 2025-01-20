@@ -1,9 +1,10 @@
 from langchain_openai import OpenAI
-from langchain.prompts import PromptTemplate
+from langchain.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
 from aiogram.types import Message
 from utils.handle_error import handle_openai_errors
-from utils.database import get_user_context, async_session, get_user
-from utils.actions_json import ActionsJSON
+from utils.database import async_session, get_user
 from config import OPENAI_API_KEY
 
 # Инициализация OpenAI
@@ -26,26 +27,54 @@ mood_chain = mood_prompt | llm
 support_chain = support_prompt | llm
 
 
+users_dialogs = dict()
+
+
+# Функция для получения истории диалога пользователя
+def get_session_history(user_id: str) -> ChatMessageHistory:
+    if user_id not in users_dialogs:
+        users_dialogs[user_id] = ChatMessageHistory()  # Создаем новую историю для пользователя
+    return users_dialogs[user_id]
+
+
 @handle_openai_errors
 async def chat_with_gpt(message: Message) -> str:
     async with async_session() as session:
-        user_context_json = await get_user_context(session, message)
-        messages_array = ActionsJSON.from_json(user_context_json.context_data).get_messages()
-
         user = await get_user(session, message)
 
-        # Формируем контекст из истории сообщений
-        context = "\n".join(messages_array[-5:])
+        history = get_session_history(str(user.user_id))
+
+        prompt_template = ChatPromptTemplate.from_messages([
+            MessagesPlaceholder(variable_name="history"),
+            ("user", "{input}"),
+        ])
+
+        # Создаем цепочку с шаблоном и моделью
+        chain = prompt_template | llm
+
+        conversation = RunnableWithMessageHistory(
+            chain,
+            get_session_history,
+            input_messages_key="input",
+            history_messages_key="history",
+        )
 
         wrapped_message = (
-            f"Ты — психолог. Тебя зовут Зигмунд Фрейд. Твой клиент по имени {user.name} написал тебе следующее сообщение: {message.text}.\n"
+            f"Ты — профессиональный психолог. Твой клиент по имени {user.name} написал тебе следующее сообщение: {message.text}.\n"
             "Ответь на него как психолог, исключительно с этой точки зрения. "
-            f"до этого вопроса вы немного пообщались. Вот последнее что он говорил {context}"
-            "Также не надо каждый раз представляться, попробуй следить за контекстом, если сможешь, и пиши как настоящий психолог, также ты можешь задавать вопросы."
+            "Также не надо каждый раз представляться, следи за контекстом, если сможешь, и пиши как настоящий психолог, также ты можешь задавать вопросы."
         )
 
         # Передаем контекст в модель
-        response = await llm.ainvoke(wrapped_message)
+        response = await conversation.ainvoke(
+            {"input": wrapped_message, "history": history.messages},
+            config={"configurable": {"session_id": str(user.user_id)}}
+        )
+
+        # Добавляем сообщение пользователя и ответ модели в историю
+        history.add_user_message(message.text)
+        history.add_ai_message(response)
+
         return response
 
 
