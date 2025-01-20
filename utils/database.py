@@ -28,7 +28,7 @@ class UserContext(Base):
     __tablename__ = "users_context"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # Внешний ключ на таблицу users
+    user_id = Column(BigInteger, ForeignKey("users.user_id"), nullable=False)  # Внешний ключ на таблицу users
     context_data = Column(String, nullable=True)  # Контекст пользователя (например, JSON)
     created_at = Column(String, nullable=False)  # Время создания записи
     updated_at = Column(String, nullable=False)  # Время обновления записи
