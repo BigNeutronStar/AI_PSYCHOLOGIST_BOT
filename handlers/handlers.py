@@ -1,21 +1,17 @@
+from handlers.technique import router as technique_router
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
-from aiogram.filters import Command
-from aiogram.fsm.context import FSMContext
+from aiogram.types import ReplyKeyboardRemove
 from states.registration import RegistrationStates
-from states.feedback import FeedbackStates
 from utils.langchain_api import detect_mood, generate_support_response, chat_with_gpt
-from utils.keyboards import main_menu_keyboard, give_subscribe_inline_keyboard, relaxation_keyboard, self_help_keyboard, create_feedback_keyboard
+from utils.keyboards import main_menu_keyboard, main_menu_buttons_texts, create_feedback_keyboard, give_subscribe_inline_keyboard
 from utils.registration import check_name, check_age
 from utils.scheduler import subscribe_daily_reminder, unsubscribe_daily_reminder
 from utils.database import create_user_and_context
 from config import bot
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from states.feedback import FeedbackStates
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
-from aiogram.fsm.state import StatesGroup, State
 
 # Создаем единый роутер
 router = Router()
@@ -69,12 +65,13 @@ async def process_mood(message: Message, state: FSMContext):
 # Команда /mood
 # ----------------------
 @router.message(Command("mood"))
+@router.message(F.text == "Определение настроения")
 async def handle_mood(message: Message):
     user_states[message.from_user.id] = "waiting_for_mood"
     await message.answer("Напиши, что у тебя на душе, и я определю твое настроение.")
 
 
-@router.message(F.text & ~F.text.startswith("/"))
+@router.message(F.text & ~F.text.startswith("/") & ~(F.text in main_menu_buttons_texts))
 async def detect_user_mood(message: Message):
     if user_states.get(message.from_user.id) == "waiting_for_mood":
         mood = await detect_mood(message)
@@ -84,99 +81,20 @@ async def detect_user_mood(message: Message):
         await handle_general_message(message)
 
 
-
-# ----------------------
-# Команда /relax
-# ----------------------
-@router.message(Command("relax"))
-async def suggest_relaxation(message: Message):
-    await message.answer("Выбери технику релаксации:", reply_markup=relaxation_keyboard)
-
-
-@router.callback_query(F.data == "breathing")
-async def breathing_exercise(callback: CallbackQuery):
-    # Удаляем старое сообщение с кнопками
-    await callback.message.delete()
-
-    # Отправляем новое сообщение
-    await callback.message.answer(
-        "Техника '4-7-8': Вдохните на 4 секунды, задержите дыхание на 7 секунд, выдохните на 8 секунд.",
-        reply_markup=give_subscribe_inline_keyboard('breathing')
-    )
-
-
-
-@router.callback_query(F.data == "meditation")
-async def meditation_exercise(callback: CallbackQuery):
-    # Удаляем старое сообщение с кнопками
-    await callback.message.delete()
-
-    # Отправляем новое сообщение
-    await callback.message.answer(
-        "Медитация: Сядьте удобно, закройте глаза и сосредоточьтесь на своем дыхании. Дышите медленно и глубоко.",
-        reply_markup=give_subscribe_inline_keyboard('meditation')
-    )
-
-
-
-@router.callback_query(F.data == "progressive")
-async def progressive_relaxation(callback: CallbackQuery):
-    # Удаляем старое сообщение с кнопками
-    await callback.message.delete()
-
-    # Отправляем новое сообщение
-    await callback.message.answer(
-        "Прогрессивная релаксация: Напрягайте и расслабляйте мышцы по очереди, начиная с ног и заканчивая лицом.",
-        reply_markup=give_subscribe_inline_keyboard("progressive")
-    )
-
-
-
-# ----------------------
-# Команда /self_help
-# ----------------------
-@router.message(Command("self_help"))
-async def suggest_self_help(message: Message):
-    await message.answer("Выбери технику самопомощи:", reply_markup=self_help_keyboard)
-
-
-@router.callback_query(F.data == "gratitude")
-async def gratitude_journal(callback: CallbackQuery):
-    # Удаляем старое сообщение с кнопками
-    await callback.message.delete()
-
-    # Отправляем новое сообщение
-    await callback.message.answer(
-        "Запиши 3 вещи, за которые ты благодарен.",
-        reply_markup=give_subscribe_inline_keyboard("gratitude")
-    )
-
-
-
-@router.callback_query(F.data == "five_senses")
-async def five_senses_exercise(callback: CallbackQuery):
-    # Удаляем старое сообщение с кнопками
-    await callback.message.delete()
-
-    # Отправляем новое сообщение
-    await callback.message.answer(
-        "Назови 5 вещей, которые ты видишь, 4 вещи, которые ты слышишь, 3 вещи, которые ты чувствуешь, "
-        "2 вещи, которые ты ощущаешь на вкус, и 1 вещь, которую ты чувствуешь запахом.",
-        reply_markup=give_subscribe_inline_keyboard("five_senses")
-    )
-
+router.include_router(technique_router)
 
 
 # ----------------------
 # Команда /support
 # ----------------------
 @router.message(Command("support"))
+@router.message(F.text == "Поддержка")
 async def handle_support(message: Message):
     user_states[message.from_user.id] = "waiting_for_support"
     await message.answer("Напиши, что тебя беспокоит, и я постараюсь поддержать тебя.")
 
 
-@router.message(F.text & ~F.text.startswith("/"))
+@router.message(F.text & ~F.text.startswith("/") & ~(F.text in main_menu_buttons_texts))
 async def generate_support(message: Message):
     if user_states.get(message.from_user.id) == "waiting_for_support":
         mood = await detect_mood(message)
@@ -186,10 +104,11 @@ async def generate_support(message: Message):
     else:
         await handle_general_message(message)
 
+
 # ----------------------
 # Общий обработчик текстовых сообщений
 # ----------------------
-@router.message(F.text & ~F.text.startswith("/"))
+@router.message(F.text & ~F.text.startswith("/") & ~(F.text in main_menu_buttons_texts))
 async def handle_general_message(message: Message):
     # Отправляем обёрнутое сообщение в модель
     response = await chat_with_gpt(message)
@@ -202,9 +121,6 @@ async def handle_general_message(message: Message):
 # Подписка / отписка
 # ----------------------
 
-# Хранилище для удаленных сообщений
-deleted_messages = {}
-
 subscribe_techniques = {
     "gratitude": "Дневник благодарности",
     "five_senses": "5 чувств",
@@ -214,19 +130,21 @@ subscribe_techniques = {
 }
 
 
+@router.callback_query(F.data.startswith("change_subscription"))
+async def give_subscribe(callback: CallbackQuery):
+    technique = "_".join(callback.data.split('_')[2:])
+    technique_name = subscribe_techniques.get(technique)
+
+    await callback.message.answer(
+        f"Выберите опцию для техники '{technique_name}'.",
+        reply_markup=give_subscribe_inline_keyboard(technique)
+    )
+
+
 @router.callback_query(F.data.startswith("subscribe_scheduler"))
-async def subscribe_gratitude(callback: CallbackQuery):
+async def subscribe(callback: CallbackQuery):
     chat_id = callback.message.chat.id
     technique_name = subscribe_techniques.get("_".join(callback.data.split('_')[2:]))
-
-    # Сохраняем удаленное сообщение
-    deleted_messages[chat_id] = {
-        "text": callback.message.text,
-        "reply_markup": callback.message.reply_markup
-    }
-
-    # Удаляем старое сообщение
-    await callback.message.delete()
 
     # Отправляем новое сообщение
     subscribe_daily_reminder(bot, chat_id, technique_name)
@@ -236,21 +154,10 @@ async def subscribe_gratitude(callback: CallbackQuery):
     )
 
 
-
-
 @router.callback_query(F.data.startswith("unsubscribe_scheduler"))
-async def unsubscribe_gratitude(callback: CallbackQuery):
+async def unsubscribe(callback: CallbackQuery):
     chat_id = callback.message.chat.id
     technique_name = subscribe_techniques.get("_".join(callback.data.split('_')[2:]))
-
-    # Сохраняем удаленное сообщение
-    deleted_messages[chat_id] = {
-        "text": callback.message.text,
-        "reply_markup": callback.message.reply_markup
-    }
-
-    # Удаляем старое сообщение
-    await callback.message.delete()
 
     # Отправляем новое сообщение
     unsubscribe_daily_reminder(chat_id, technique_name)
@@ -260,13 +167,9 @@ async def unsubscribe_gratitude(callback: CallbackQuery):
     )
 
 
-
 @router.callback_query(F.data == "cancel_subscribe_scheduler")
 async def cancel_subscription(callback: CallbackQuery):
     await callback.message.answer("🫡", reply_markup=main_menu_keyboard)
-
-
-
 
 
 # ----------------------
@@ -282,8 +185,10 @@ feedback_questions = [
     "Порекомендуете ли вы этого бота своим друзьям?",
 ]
 
+
 # Начало сбора отзывов
 @router.message(Command("feedback"))
+@router.message(F.text == "Фидбек")
 async def start_feedback(message: Message, state: FSMContext):
     # Очищаем состояние и данные перед началом
     await state.clear()
@@ -299,21 +204,26 @@ async def start_feedback(message: Message, state: FSMContext):
 async def handle_feedback_question_1(callback: CallbackQuery, state: FSMContext):
     await process_feedback(callback, state, current_question=0, next_state=FeedbackStates.waiting_for_question_2)
 
+
 @router.callback_query(FeedbackStates.waiting_for_question_2, F.data.startswith("feedback:"))
 async def handle_feedback_question_2(callback: CallbackQuery, state: FSMContext):
     await process_feedback(callback, state, current_question=1, next_state=FeedbackStates.waiting_for_question_3)
+
 
 @router.callback_query(FeedbackStates.waiting_for_question_3, F.data.startswith("feedback:"))
 async def handle_feedback_question_3(callback: CallbackQuery, state: FSMContext):
     await process_feedback(callback, state, current_question=2, next_state=FeedbackStates.waiting_for_question_4)
 
+
 @router.callback_query(FeedbackStates.waiting_for_question_4, F.data.startswith("feedback:"))
 async def handle_feedback_question_4(callback: CallbackQuery, state: FSMContext):
     await process_feedback(callback, state, current_question=3, next_state=FeedbackStates.waiting_for_question_5)
 
+
 @router.callback_query(FeedbackStates.waiting_for_question_5, F.data.startswith("feedback:"))
 async def handle_feedback_question_5(callback: CallbackQuery, state: FSMContext):
     await process_feedback(callback, state, current_question=4, next_state=None)
+
 
 # Универсальная функция обработки отзывов
 async def process_feedback(callback: CallbackQuery, state: FSMContext, current_question: int, next_state):
@@ -346,6 +256,7 @@ async def process_feedback(callback: CallbackQuery, state: FSMContext, current_q
 # Команда /help (Экстренная помощь)
 # ----------------------
 @router.message(Command("help"))
+@router.message(F.text == "Горячие линии поддержки и помощь")
 async def emergency_help(message: Message):
     # Кнопки для выбора действия
     keyboard = InlineKeyboardMarkup(inline_keyboard=[

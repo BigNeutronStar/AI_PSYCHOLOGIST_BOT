@@ -1,14 +1,17 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
+main_menu_buttons_texts = ("Определение настроения", "Релакс", "Поддержка", "Успокоить себя самостоятельно", "Фидбек",
+                           "Горячие линии поддержки и помощь")
+
 # Клавиатура главного меню
 main_menu_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="/mood")],
-        [KeyboardButton(text="/relax")],
-        [KeyboardButton(text="/support")],
-        [KeyboardButton(text="/self_help")],
-        [KeyboardButton(text="/feedback")],
-        [KeyboardButton(text="/help")],
+        [KeyboardButton(text="Определение настроения")],
+        [KeyboardButton(text="Релакс")],
+        [KeyboardButton(text="Поддержка")],
+        [KeyboardButton(text="Успокоить себя самостоятельно")],
+        [KeyboardButton(text="Фидбек")],
+        [KeyboardButton(text="Горячие линии поддержки и помощь")],
         
     ],
     resize_keyboard=True,
@@ -21,7 +24,10 @@ relaxation_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="Прогрессивная релаксация", callback_data="progressive")]
 ])
 
-
+feelings_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Лучше", callback_data="feel_better")],
+        [InlineKeyboardButton(text="Без изменений", callback_data="feel_same")]
+    ])
 
 
 self_help_keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -29,6 +35,12 @@ self_help_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="Упражнение 'Пять чувств'", callback_data="five_senses")],
 ])
 
+
+def give_start_technique_keyboard(technique: str):
+    return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Начать", callback_data=f"start_{technique}")],
+            [InlineKeyboardButton(text="Управление подпиской на эту технику", callback_data=f"change_subscription_{technique}")]
+    ])
 
 def give_subscribe_inline_keyboard(technique: str):
     return InlineKeyboardMarkup(inline_keyboard=[
