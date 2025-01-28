@@ -71,7 +71,7 @@ async def handle_mood(message: Message):
     await message.answer("Напиши, что у тебя на душе, и я определю твое настроение.")
 
 
-@router.message(F.text & ~F.text.startswith("/") & ~(F.text in main_menu_buttons_texts))
+@router.message(F.text & ~F.text.startswith("/") & ~F.text.func(lambda text: text in main_menu_buttons_texts))
 async def detect_user_mood(message: Message):
     if user_states.get(message.from_user.id) == "waiting_for_mood":
         mood = await detect_mood(message)
@@ -79,9 +79,6 @@ async def detect_user_mood(message: Message):
         user_states[message.from_user.id] = None
     else:
         await handle_general_message(message)
-
-
-router.include_router(technique_router)
 
 
 # ----------------------
@@ -94,7 +91,7 @@ async def handle_support(message: Message):
     await message.answer("Напиши, что тебя беспокоит, и я постараюсь поддержать тебя.")
 
 
-@router.message(F.text & ~F.text.startswith("/") & ~(F.text in main_menu_buttons_texts))
+@router.message(F.text & ~F.text.startswith("/") & ~F.text.func(lambda text: text in main_menu_buttons_texts))
 async def generate_support(message: Message):
     if user_states.get(message.from_user.id) == "waiting_for_support":
         mood = await detect_mood(message)
@@ -108,9 +105,10 @@ async def generate_support(message: Message):
 # ----------------------
 # Общий обработчик текстовых сообщений
 # ----------------------
-@router.message(F.text & ~F.text.startswith("/") & ~(F.text in main_menu_buttons_texts))
+@router.message(F.text & ~F.text.startswith("/") & ~F.text.func(lambda text: text in main_menu_buttons_texts))
 async def handle_general_message(message: Message):
     # Отправляем обёрнутое сообщение в модель
+    print("==========>")
     response = await chat_with_gpt(message)
 
     # Отправляем ответ пользователю
@@ -315,3 +313,7 @@ async def hotlines(callback: CallbackQuery):
     await callback.message.answer(
         f"Вот список горячих линий помощи для региона {region}:\n\n{hotline_text}"
     )
+
+
+router.include_router(technique_router)
+
