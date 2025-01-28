@@ -87,6 +87,7 @@ async def detect_mood(message: Message) -> str:
 
 
 @handle_openai_errors
-async def generate_support_response(mood: str, message: Message) -> str:
+async def generate_support_response(message: Message) -> str:
+    mood = await detect_mood(message)
     result = await support_chain.ainvoke({"mood": mood, "message": message.text})
     return result

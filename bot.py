@@ -1,6 +1,6 @@
 from aiogram import Dispatcher
 
-from handlers.handlers import router  # Импортируем общий роутер из handlers.py
+from handlers import router
 
 from utils.scheduler import start_scheduler
 from config import bot

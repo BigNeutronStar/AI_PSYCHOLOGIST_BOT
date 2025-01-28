@@ -4,7 +4,6 @@ from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 
 from states.techniques_states import GratitudeStates, FiveSensesStates
-from utils.langchain_api import detect_mood, generate_support_response
 from utils.keyboards import main_menu_keyboard, give_start_technique_keyboard, give_subscribe_inline_keyboard, \
     relaxation_keyboard, self_help_keyboard, feelings_keyboard
 from aiogram.types import CallbackQuery, Message

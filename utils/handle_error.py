@@ -17,6 +17,8 @@ def handle_openai_errors(func: Callable[..., Coroutine[Any, Any, str]]) -> Calla
                     "Доступ к OpenAI ограничен в вашем регионе. Попробуйте использовать VPN (Казахский)."
                 ) from e
             elif "invalid_request_error" in str(e):
+                await message.answer(
+                    "К сожалению мы не можем ответить на ваш запрос так как ChatGPT посчитал что это некорректный запрос.")
                 raise ValueError("Некорректный запрос к OpenAI API.") from e
             elif "rate_limit_exceeded" in str(e):
                 raise RuntimeError("Превышен лимит запросов к OpenAI API. Попробуйте позже.") from e

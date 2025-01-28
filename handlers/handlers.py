@@ -1,23 +1,19 @@
-from handlers.technique import router as technique_router
 from aiogram import Router, F
 from aiogram.types import ReplyKeyboardRemove
 from states.registration import RegistrationStates
-from utils.langchain_api import detect_mood, generate_support_response, chat_with_gpt
-from utils.keyboards import main_menu_keyboard, main_menu_buttons_texts, create_feedback_keyboard, give_subscribe_inline_keyboard
+from utils.keyboards import main_menu_keyboard, create_feedback_keyboard, give_subscribe_inline_keyboard
 from utils.registration import check_name, check_age
 from utils.scheduler import subscribe_daily_reminder, unsubscribe_daily_reminder
 from utils.database import create_user_and_context
 from config import bot
 from states.feedback import FeedbackStates
+from states.generall_states import GeneralStates
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 
 # Создаем единый роутер
 router = Router()
-
-# Состояния пользователей
-user_states = {}
 
 
 # ----------------------
@@ -66,19 +62,9 @@ async def process_mood(message: Message, state: FSMContext):
 # ----------------------
 @router.message(Command("mood"))
 @router.message(F.text == "Определение настроения")
-async def handle_mood(message: Message):
-    user_states[message.from_user.id] = "waiting_for_mood"
+async def handle_mood(message: Message, state: FSMContext):
+    await state.set_state(GeneralStates.waiting_for_mood)
     await message.answer("Напиши, что у тебя на душе, и я определю твое настроение.")
-
-
-@router.message(F.text & ~F.text.startswith("/") & ~F.text.func(lambda text: text in main_menu_buttons_texts))
-async def detect_user_mood(message: Message):
-    if user_states.get(message.from_user.id) == "waiting_for_mood":
-        mood = await detect_mood(message)
-        await message.answer(f"Ваше настроение: {mood}")
-        user_states[message.from_user.id] = None
-    else:
-        await handle_general_message(message)
 
 
 # ----------------------
@@ -86,33 +72,9 @@ async def detect_user_mood(message: Message):
 # ----------------------
 @router.message(Command("support"))
 @router.message(F.text == "Поддержка")
-async def handle_support(message: Message):
-    user_states[message.from_user.id] = "waiting_for_support"
+async def handle_support(message: Message, state: FSMContext):
+    await state.set_state(GeneralStates.waiting_for_support)
     await message.answer("Напиши, что тебя беспокоит, и я постараюсь поддержать тебя.")
-
-
-@router.message(F.text & ~F.text.startswith("/") & ~F.text.func(lambda text: text in main_menu_buttons_texts))
-async def generate_support(message: Message):
-    if user_states.get(message.from_user.id) == "waiting_for_support":
-        mood = await detect_mood(message)
-        response = await generate_support_response(mood=mood, message=message)
-        await message.answer(response)
-        user_states[message.from_user.id] = None
-    else:
-        await handle_general_message(message)
-
-
-# ----------------------
-# Общий обработчик текстовых сообщений
-# ----------------------
-@router.message(F.text & ~F.text.startswith("/") & ~F.text.func(lambda text: text in main_menu_buttons_texts))
-async def handle_general_message(message: Message):
-    # Отправляем обёрнутое сообщение в модель
-    print("==========>")
-    response = await chat_with_gpt(message)
-
-    # Отправляем ответ пользователю
-    await message.answer(response)
 
 
 # ----------------------
@@ -313,7 +275,3 @@ async def hotlines(callback: CallbackQuery):
     await callback.message.answer(
         f"Вот список горячих линий помощи для региона {region}:\n\n{hotline_text}"
     )
-
-
-router.include_router(technique_router)
-
